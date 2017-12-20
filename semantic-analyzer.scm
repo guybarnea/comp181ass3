@@ -1,6 +1,61 @@
 (load "tag-parser.scm")
 
+;;;;;;;;;;;;;;;;;;;;;; helper function ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(define lambda-args->lst
+  (lambda (el)
+    (let ((lambda-type (car el))
+	  (args (cadr el)))
+    (cond
+      ((equal? lambda-type 'lambda-simple) args)
+      ((equal? lambda-type 'lambda-opt) (append args (list (caddr el))))
+      (else (list args))))   
+))
+
+
+
+(define get-lambda-body
+  (lambda (el)
+
+    (let ((lambda-type (car el)))
+      (cond
+    ((lambda-opt-var? el) (cadddr el))  	
+	((equal? lambda-type 'lambda-opt) (cadddr el))
+	(else (caddr el))))   
+))
+
+
+(define get-lambda-args
+  (lambda (el)
+    (let ((lambda-type (car el))
+	  (args (cadr el)))
+    (cond
+      ((special-lambda? el) `(() ,(caddr el)))
+      ((null? args) '(()))  
+      ((equal? lambda-type 'lambda-simple) `(,args))
+      ((equal? lambda-type 'lambda-opt) `(,args ,(caddr el)))
+      (else (list args))))   
+))
+
+(define lambda?
+  (lambda (exp)
+    (or 
+      (equal? exp 'lambda-simple)
+      (equal? exp 'lambda-opt))
+))  
+
+
+(define var-type?
+	(lambda (exp)
+		(member (car exp) '(var fvar bvar pvar const))))
+
+(define special-lambda?
+	(lambda (exp)
+		(and (equal? (car exp) 'lambda-opt) (null? (cadr exp)))))
+
+
+
+;;;;;;;;;;;;;;;;;;;;;; applic-lambda-simple-nil ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define applic-lambda-simple-nil?
   (lambda (exp)
@@ -31,47 +86,17 @@
 	    (else el))) (remove-applic-lambda-nil-tag lst))
 ))  
 
+;;;;;;;;;;;;;;;;;;;;;; box-set ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-(define lambda-args->lst
-  (lambda (el)
-    (let ((lambda-type (car el))
-	  (args (cadr el)))
-    (cond
-      ((equal? lambda-type 'lambda-simple) args)
-      ((equal? lambda-type 'lambda-opt) (append args (list (caddr el))))
-      (else (list args))))   
-))
+; (define box-set
+;   ;; fill in the variable boxing details here
+;   )
 
 
-
-(define get-lambda-body
-  (lambda (el)
-    (let ((lambda-type (car el)))
-      (cond
-	((equal? lambda-type 'lambda-opt) (cadddr el))
-	(else (caddr el))))   
-))
+;;;;;;;;;;;;;;;;;;;;;; pe->lex-pe ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-(define get-lambda-args
-  (lambda (el)
-    (let ((lambda-type (car el))
-	  (args (cadr el)))
-    (cond
-      ((null? args) '(()))
-      ((equal? lambda-type 'lambda-simple) `(,args))
-      ((equal? lambda-type 'lambda-opt) `(,args ,(caddr el)))
-      (else (list args))))   
-))
-
-(define lambda?
-  (lambda (exp)
-    (or 
-      (equal? exp 'lambda-var)
-      (equal? exp 'lambda-simple)
-      (equal? exp 'lambda-opt))
-))  
 
 (define replace-bound
   (lambda (var major minor exp)
@@ -142,10 +167,50 @@
 ))
 
 
-; (define box-set
-;   ;; fill in the variable boxing details here
-;   )
 
-; (define annotate-tc
-;   ;; fill in the tail-call annotation details here
-;   )
+
+;;;;;;;;;;;;;;;;;;;;;; annotate-tc ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+(define anotate-tc-run
+  (lambda (exp in-tp)
+      (cond
+	((null? exp) exp)
+	((list? exp)
+	    (cond
+	      ((lambda? (car exp))
+		`(,(car exp) ,@(get-lambda-args exp) ,(anotate-tc-run (get-lambda-body exp) #t)))
+
+	      ((equal? (car exp) 'applic)
+			(if in-tp 
+		  `(tc-applic ,@(anotate-tc-run (cdr exp) #f))
+		  `(applic ,@(anotate-tc-run (cdr exp) #f))))	
+
+	      ((equal? (car exp) 'if3)
+	      	(let ((test (cadr exp))
+	      		  (dit (caddr exp))
+	      		  (dif (cadddr exp)))
+		`(if3 ,(anotate-tc-run test #f) ,(anotate-tc-run dit in-tp)
+		      ,(anotate-tc-run dif in-tp))))
+
+	 ;      ((member (car exp) '(def set box-set))
+		; `(,(car exp) ,(cadr exp) ,(anotate-tc-run (caddr exp) #f))) ------>>>> box-set not implemented
+
+	      ((or (equal? (car exp) 'seq) (equal? (car exp) 'or))
+		(let* ((op (car exp))
+			   (reversed-lst (reverse (cadr exp)))
+		       (last-el (car reversed-lst))
+		       (list-without-last (reverse (cdr reversed-lst))))
+
+		`(,op (,@(map (lambda (exp) (anotate-tc-run exp #f)) list-without-last) 
+		     ,(anotate-tc-run last-el in-tp)))))
+
+	      ((var-type? exp) exp)
+	      (else (map (lambda (x) (anotate-tc-run x in-tp)) exp))))
+	(else exp))
+))
+
+(define annotate-tc
+  (lambda (exp)
+    (anotate-tc-run exp #f)
+))
