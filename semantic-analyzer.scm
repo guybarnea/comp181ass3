@@ -17,7 +17,6 @@
 
     (let ((lambda-type (car el)))
       (cond
-    ((lambda-opt-var? el) (cadddr el))  	
 	((equal? lambda-type 'lambda-opt) (cadddr el))
 	(else (caddr el))))   
 ))
@@ -375,8 +374,8 @@
 	      		  (dif (cadddr exp)))
 		`(if3 ,(anotate-tc-run test #f) ,(anotate-tc-run dit in-tp)
 		      ,(anotate-tc-run dif in-tp))))
-
-
+        ((member (car exp) '(def box-set))
+    `(,(car exp) ,(cadr exp) ,(anotate-tc-run (caddr exp) #f)))
 	      ((or (equal? (car exp) 'seq) (equal? (car exp) 'or))
 		(let* ((op (car exp))
 			   (reversed-lst (reverse (cadr exp)))
