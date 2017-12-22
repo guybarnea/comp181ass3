@@ -164,7 +164,7 @@
 		(newline))
 ))
 
-#| (define Tests
+(define Tests
   (list
     '(lambda (x) x)
     
@@ -456,7 +456,7 @@
   
   '(lambda (a b . x) 1)
 
-))   |#
+))  
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -2118,9 +2118,9 @@
 (runAllTests
   (list      
       (cons "Comp161 Ass3 Tests" Comp161Ass3Tests)
-      ;(cons "Complex Tests" Tests)  
-      ;(cons "Gilad Winterfeld Tests" GiladWinterfeldTests) 
-      ;(cons "Elad Zohar Tests" EladZoharTests) 
+      (cons "Complex Tests" Tests)  
+      (cons "Gilad Winterfeld Tests" GiladWinterfeldTests) 
+      (cons "Elad Zohar Tests" EladZoharTests) 
 ))
 
 
