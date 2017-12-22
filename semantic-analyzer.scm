@@ -290,68 +290,12 @@
                                             (box-set (lambdaCheckAndBoxList (getLambdaBody exp)
                                                                             (reverse (getLambdaParameters exp))))))
               (else (map box-set exp)))))
-;;;;;;;;;;;;;;;;;;;;;; pe->lex-pe 1 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;;;;;;;;;;;;;;;;;;;; pe->lex-pe Guy;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
 
-(define lex-add-replace '())
-
-
-(define lex-add
-    (lambda (exp lst)
-        (let ((run
-                (compose-patterns
-                    (pattern-rule
-                    `(lambda-simple ,(? 'args) . ,(? 'body))
-                    (lambda (args body)
-                        `(lambda-simple ,args ,(car (lex-add-replace body (cons args lst))))))
-                        
-                    (pattern-rule
-                    `(lambda-var ,(? 'args) . ,(? 'body))
-                    (lambda (arg body)
-                    `(lambda-var ,arg ,(car (lex-add-replace body (cons (list arg) lst))))))
-                        
-                    (pattern-rule
-                    `(lambda-opt ,(? 'args) ,(? 'arg (lambda (el) (not (list? el)))) . ,(? 'body))
-                    (lambda (args arg body)
-                    `(lambda-opt ,args ,arg ,(car (lex-add-replace body (cons (append args (list arg)) lst)))))))))
-                                                  ;else
-                (run exp (lambda () (lex-add-replace exp lst))))))
-        
-;goal: a => (bvar a 2 3)
-;lst: ((a b c) (c d e) (e f g)...)
-(define varsIndex
-    (lambda (var lst)
-        (letrec ((finder (lambda (partLst major minor)
-                                (cond ((null? (car partLst)) (finder (cdr partLst) (+ major 1) 0))
-                                      ((equal? (caar partLst) var) (cons major minor))
-                                      (else (finder (cons (cdar partLst) (cdr partLst)) major (+ minor 1)))))))
-            (if (member var (fold-right append '() lst))
-                (let ((majorMinor (finder lst -1 0)))
-                    (if (= (car majorMinor) -1)
-                        `(pvar ,var ,(cdr majorMinor))
-                        `(bvar ,var ,(car majorMinor) ,(cdr majorMinor))))
-                `(fvar ,var)))))
-    
-;; exp and list of current depth params ((pvars) (bvars0) (bvars1)...)
-(define lex-add-replace
-    (lambda (exp lst)
-        (cond ((or (null? exp) (not (list? exp))) exp)
-              ((eq? (car exp) 'var) (varsIndex (cadr exp) lst))
-              (else (map (lambda (innerExp) (lex-add innerExp lst)) exp)))))
-        
-        
-(define pe->lex-pe 
-    (lambda(pes)
-        (lex-add pes '())))
-
-
-
-;;;;;;;;;;;;;;;;;;;;;; pe->lex-pe guy;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-
-
-#| (define replace-bound
+(define replace-bound
   (lambda (var major minor exp)
       (cond
 	((null? exp) exp)
@@ -359,10 +303,10 @@
 	    (cond
 	      ((and (= 2 (length exp)) (equal? (car exp) 'var) (equal? (cadr exp) var))
 		`(bvar ,var ,major ,minor))
-	      ((and (lambda? (car exp)) (not (member var (lambda-args->lst exp)))) ; bound
+	      ((and (lambda? exp) (not (member var (lambda-args->lst exp)))) ; bound
 		`(,(car exp) ,@(get-lambda-args exp) 
 		  ,(replace-bound var (+ 1 major) minor (get-lambda-body exp))))
-	      ((lambda? (car exp)) exp)
+	      ((lambda? exp) exp)
 	      (else (map (lambda (x) (replace-bound var major minor x)) exp))))
 	(else exp))
 ))	
@@ -375,9 +319,9 @@
 	    (cond
 	      ((and (= 2 (length exp)) (equal? (car exp) 'var) (equal? (cadr exp) var))
 		`(pvar ,var ,minor))
-	      ((and (lambda? (car exp)) (not (member var (lambda-args->lst exp)))) ; bound
+	      ((and (lambda? exp) (not (member var (lambda-args->lst exp)))) ; bound
 		`(,(car exp) ,@(get-lambda-args exp) ,(replace-bound var 0 minor (get-lambda-body exp))))
-	      ((lambda? (car exp)) exp)  	  
+	      ((lambda? exp) exp)  	  
 	      (else (map (lambda (x) (replace-param var minor x)) exp))))
 	(else exp))
 ))	
@@ -390,16 +334,10 @@
 
 (define search-param-bound-vars
     (lambda (exp)
-      (cond
-	((null? exp) exp)
-	((list? exp)
-	    (cond 
-	      ((and (not (null? exp)) (lambda? (car exp)))
-		`(,(car exp) ,@(get-lambda-args exp)
-		  ,(search-param-bound-vars (replace-params 
-		      (lambda-args->lst exp)
-		      -1 
-		      (get-lambda-body exp)))))
+     (cond ((null? exp) exp)
+						((list? exp) 
+							(cond ((and (not (null? exp)) (lambda?  exp))
+							 `(,(car exp) ,@(get-lambda-args exp),(search-param-bound-vars (replace-params (lambda-args->lst exp) -1  (get-lambda-body exp)))))
 	      (else (map search-param-bound-vars exp))))
 	(else exp))
 ))
@@ -412,9 +350,7 @@
 			      													(else (map iter exp-tag))))
 										(else exp-tag)))))
       	(iter exp-tag))
-)) |#
-
-
+))
 
 
 ;;;;;;;;;;;;;;;;;;;;;; annotate-tc ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
