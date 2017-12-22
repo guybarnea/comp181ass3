@@ -1,4 +1,4 @@
-(load "compiler.scm")
+(load "semantic-analyzer.scm")
 
 (define display-green-with-number
     (lambda (counter)
